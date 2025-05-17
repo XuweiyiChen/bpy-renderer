@@ -7,6 +7,21 @@ Bpy-renderer offers two core components:
 * Core package for setting engines, cameras, environments, models, scenes, rendering outputs.
 * [Example scripts](./examples/) for various functions.
 
+## Demos
+
+**3D Object**
+
+https://github.com/user-attachments/assets/6e5a5767-0323-40aa-95a7-f1ab465976d6
+
+**3D Scene**
+
+https://github.com/user-attachments/assets/d68cf607-3769-487d-9cc7-9c8da311abb6
+
+**3D Animation**
+
+https://github.com/user-attachments/assets/2c7e356c-be30-4d73-bce8-2d9a9965a482
+
+https://github.com/user-attachments/assets/bda030ee-9144-4cb4-bab0-0fb2082180b8
 
 ## Installation
 
