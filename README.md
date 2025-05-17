@@ -40,5 +40,9 @@ Coming soon! For now, please check our example script in [render_360video.py](./
 
 | Scripts | Task |
 | - | - |
-| [render_6ortho.py](examples/object/render_6ortho.py) | Render 6 ortho views with rgb, depth, normals |
-| [render_360video.py](examples/object/render_360video.py) | Render 360 degree video |
+| [object/render_6ortho.py](examples/object/render_6ortho.py) | Render 6 ortho views with rgb, depth, normals |
+| [object/render_360video.py](examples/object/render_360video.py) | Render 360 degree video |
+| [scene/render_360video.py](examples/scene/render_360video.py) | Render 360 degree video from a scene |
+| [scene/render_360video_decomp.py](examples/scene/render_360video_decomp.py) | Render 360 degree "semantic-field-like" video from a scene |
+| [animation/render_animation_video.py](examples/animation/render_animation_video.py) | Render a single-view video from an animation |
+| [animation/render_animation_union.py](examples/animation/render_animation_union.py) | Render single-view rgb, depth, normal video from an animation |
