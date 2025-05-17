@@ -3,6 +3,7 @@ import math
 import numpy as np
 
 import bpy
+import mathutils
 from mathutils import Vector
 from typing import Optional, Literal
 from .utils import get_keyframes
@@ -128,34 +129,12 @@ class SceneManager:
         # Restore original frame
         bpy.ops.object.select_all(action="DESELECT")
 
-    def normalize_scene_all_frames(
-        self,
-        normalize_range: float = 1.0,
-        range_type: Literal["CUBE", "SPHERE"] = "CUBE",
-    ):
-        # Recompute bounding box, offset and scale
-        bbox_min, bbox_max = self.get_scene_bbox_all_frames()
-        if range_type == "CUBE":
-            scale = normalize_range / max(bbox_max - bbox_min)
-        elif range_type == "SPHERE":
-            scale = normalize_range / (bbox_max - bbox_min).length
-        else:
-            raise ValueError(
-                f"Invalid range_type: {range_type}. Must be either 'CUBE' or 'SPHERE'"
-            )
-
-        # translate to origin and apply scale for each frame
-        offset = -(bbox_min + bbox_max) / 2
-        for obj in self.root_objects:
-            obj.matrix_world.translation += offset
-            # Scale relative to world center by adjusting translation and scale
-            original_translation = obj.matrix_world.translation.copy()
-            obj.matrix_world.translation = original_translation * scale
-            obj.scale = obj.scale * scale
-            bpy.context.view_layer.update()
-
-        # Restore original frame
-        bpy.ops.object.select_all(action="DESELECT")
+    def rotate_model(self, object, rotateQuaternion):
+        object.select_set(True)
+        bpy.context.view_layer.objects.active = object
+        object.rotation_mode = "QUATERNION"
+        object.rotation_quaternion = mathutils.Quaternion(rotateQuaternion)
+        bpy.ops.object.transform_apply()
 
     def render(self):
         bpy.context.scene.render.use_compositing = True
@@ -211,19 +190,30 @@ class SceneManager:
 
             material.blend_method = "OPAQUE"
 
-    def update_scene_frames(self):
-        armatures = self.scene_armatures
-        keyframes = get_keyframes(armatures)
-        bpy.context.scene.frame_end = int(max(keyframes)) if len(keyframes) > 0 else 0
+    def update_scene_frames(
+        self, mode: Literal["auto", "manual"] = "auto", num_frames: Optional[int] = None
+    ):
+        if mode == "auto":
+            armatures = self.scene_armatures
+            keyframes = get_keyframes(armatures)
+            bpy.context.scene.frame_end = (
+                int(max(keyframes)) if len(keyframes) > 0 else 0
+            )
+        elif mode == "manual":
+            if num_frames is None:
+                raise ValueError(f"num_frames must be provided if the mode is 'manual'")
+            bpy.context.scene.frame_end = num_frames - 1
 
     def clear(
         self,
+        clear_objects: Optional[bool] = True,
         clear_nodes: Optional[bool] = True,
         reset_keyframes: Optional[bool] = True,
     ):
-        objects = [x for x in bpy.data.objects]
-        for obj in objects:
-            bpy.data.objects.remove(obj, do_unlink=True)
+        if clear_objects:
+            objects = [x for x in bpy.data.objects]
+            for obj in objects:
+                bpy.data.objects.remove(obj, do_unlink=True)
 
         # Clear all nodes
         if clear_nodes:

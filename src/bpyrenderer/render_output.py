@@ -328,6 +328,7 @@ def visualize_keypoint_map(
     bone_width: int = 3,
     keypoint_radius: int = 3,
     color_mode: Literal["RGBA", "RGB"] = "RGB",
+    background_color: Tuple = (0, 0, 0),
     plot_bones: Optional[List] = None,
 ):
     """Visualize the skeleton of armature in the scene using only head positions
@@ -340,9 +341,9 @@ def visualize_keypoint_map(
 
     # Create a new image with transparent background
     if color_mode == "RGB":
-        image = Image.new("RGB", (width, height), (0, 0, 0))
+        image = Image.new("RGB", (width, height), background_color)
     elif color_mode == "RGBA":
-        image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        image = Image.new("RGBA", (width, height), background_color + (0,))
     else:
         raise ValueError(
             f"Unsupported color mode: {color_mode}. Must be either 'RGB' or 'RGBA'."
@@ -396,6 +397,7 @@ def render_keypoint_map(
     bone_color = kwargs.get("bone_color", (200, 200, 200))
     bone_width = kwargs.get("bone_width", 3)
     keypoint_radius = kwargs.get("keypoint_radius", 3)
+    background_color = kwargs.get("background_color", (0, 0, 0))
     plot_bones = kwargs.get("plot_bones", None)
 
     # Save the image
@@ -421,6 +423,7 @@ def render_keypoint_map(
             bone_color=bone_color,
             bone_width=bone_width,
             keypoint_radius=keypoint_radius,
+            background_color=background_color,
             plot_bones=plot_bones,
         )
         keypoint_map.save(output_path, file_format, quality=100)

@@ -271,11 +271,8 @@ MIXAMO_KEYPOINTS = [
     "righttoebase",
 ]
 
-MIXAMO_COLORS = {
-    MIXAMO_KEYPOINTS[i]: PRESET_COLORS[i] for i in range(len(MIXAMO_KEYPOINTS))
-}
 
-VROID_KEYPOINTS = [
+VROID_KEYPOINTS = [  # Note that vroid has not only one template
     "j_bip_c_hips",
     "j_bip_c_spine",
     "j_bip_c_chest",
@@ -300,6 +297,132 @@ VROID_KEYPOINTS = [
     "j_bip_r_toebase",
 ]
 
-VROID_COLORS = {
-    VROID_KEYPOINTS[i]: PRESET_COLORS[i] for i in range(len(VROID_KEYPOINTS))
+VROID_KEYPOINTS_2 = [
+    "hips",
+    "left leg",
+    "left knee",
+    "left ankle",
+    "left toe",
+    "right leg",
+    "right knee",
+    "right ankle",
+    "right toe",
+    "spine",
+    "chest",
+    "left shoulder",
+    "left arm",
+    "left elbow",
+    "left wrist",
+    "right shoulder",
+    "right arm",
+    "right elbow",
+    "right wrist",
+    "neck",
+    "head",
+]
+
+VROID_KEYPOINTS_3 = [
+    "hips",
+    "leftupleg",
+    "leftleg",
+    "leftfoot",
+    "lefttoebase",
+    "rightupleg",
+    "rightleg",
+    "rightfoot",
+    "righttoebase",
+    "spine",
+    "chest",
+    "spine1",
+    "leftshoulder",
+    "leftarm",
+    "leftforearm",
+    "lefthand",
+    "neck",
+    "head",
+    "rightshoulder",
+    "rightarm",
+    "rightforearm",
+    "righthand",
+]
+
+VROID_KEYPOINTS_4 = [
+    "hips",
+    "spine",
+    "chest",
+    "neck",
+    "head",
+    "shoulder_l",
+    "upperarm_l",
+    "lowerarm_l",
+    "left hand",
+    "shoulder_r",
+    "upperarm_r",
+    "lowerarm_r",
+    "right hand",
+    "upperleg_l",
+    "lowerleg_l",
+    "foot_l",
+    "upperleg_r",
+    "lowerleg_r",
+    "foot_r",
+]
+
+VROID_KEYPOINTS_5 = [
+    "hips",
+    "spine",
+    "chest",
+    "upper_chest",
+    "neck",
+    "head",
+    "shoulder.l",
+    "upper_arm.l",
+    "forearm.l",
+    "hand.l",
+    "shoulder.r",
+    "upper_arm.r",
+    "forearm.r",
+    "hand.r",
+    "thigh.l",
+    "shin.l",
+    "foot.l",
+    "toe.l",
+    "thigh.r",
+    "shin.r",
+    "foot.r",
+    "toe.r",
+]
+
+VROID_KEYPOINTS_6 = [
+    "hips",
+    "spine",
+    "spine1",
+    "spine2",
+    "neck",
+    "head",
+    "shoulder_l",
+    "arm_l",
+    "forearm_l",
+    "hand_l",
+    "shoulder_r",
+    "arm_r",
+    "forearm_r",
+    "hand_r",
+    "upleg_l",
+    "leg_l",
+    "foot_l",
+    "toe_l",
+    "upleg_r",
+    "leg_r",
+    "foot_r",
+    "toe_r",
+]
+
+VROID_KEYPOINT_MAPS = {
+    "j_bip_l_upperarm": VROID_KEYPOINTS,
+    "left arm": VROID_KEYPOINTS_2,
+    "leftarm": VROID_KEYPOINTS_3,
+    "upperarm_l": VROID_KEYPOINTS_4,
+    "upper_arm.l": VROID_KEYPOINTS_5,
+    "arm_l": VROID_KEYPOINTS_6,
 }

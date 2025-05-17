@@ -147,7 +147,10 @@ def modify_obj_vertex_color(obj: bpy.types.Object, color: Tuple):
     # Assign colors to each vertex
     for poly in mesh.polygons:  # Iterate over all polygons
         for idx in poly.loop_indices:  # Iterate over all loop indices in the polygon
-            color_layer.data[idx].color = color + (1.0,)  # RGB + Alpha
+            if len(color) == 3:
+                color_layer.data[idx].color = color + (1.0,)  # RGB + Alpha
+            else:
+                color_layer.data[idx].color = color
 
     # Update mesh with new data
     mesh.update()
