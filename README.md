@@ -25,12 +25,26 @@ https://github.com/user-attachments/assets/bda030ee-9144-4cb4-bab0-0fb2082180b8
 
 ## Installation
 
+### Common Usage
+
 We recommend installing bpy-renderer in **Python-3.10**.
 
 ```Bash
 git clone https://github.com/huanngzh/bpy-renderer.git
 pip install -e ./bpy-renderer
 ```
+
+### Docker
+
+If you have [EGL issues](https://github.com/huanngzh/bpy-renderer/issues/2) in your environment, please use our provided docker image to build a easy-to-use environment.
+
+```Bash
+docker pull ccr.ccs.tencentyun.com/huanngzh/bpyrenderer:v1.0.0
+docker run -itd --gpus all -v /path:/path -name bpyrenderer ccr.ccs.tencentyun.com/huanngzh/bpyrenderer:v1.0.0
+docker exec -it bpyrenderer bash
+```
+
+Then you can use [the above command](#common-usage) to install `bpyrenderer`.
 
 ## Quick Start
 
