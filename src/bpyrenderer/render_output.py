@@ -44,7 +44,96 @@ def enable_color_output(
     scene.render.filepath = os.path.join(output_dir, file_prefix)
 
 
-def enable_normals_output(output_dir: Optional[str] = "", file_prefix: str = "normal_"):
+def make_normal_to_rgb_node_group(node_tree, editor_type="Compositor"):
+    """Create a node group that converts normal vectors to RGB colors for visualization.
+
+    Args:
+        node_tree: The node tree to add nodes to
+        editor_type: Either "Shader" or "Compositor"
+
+    Returns:
+        Tuple of (input_socket, output_socket) for the conversion
+    """
+    link = lambda from_socket, to_socket: node_tree.links.new(from_socket, to_socket)
+    sep_color_node = node_tree.nodes.new(f"{editor_type}NodeSeparateColor")
+
+    def create_normal_to_rgb_map_node():
+        node = node_tree.nodes.new(f"{editor_type}NodeMapRange")
+        if editor_type == "Shader":
+            node.clamp = True  # Clamp
+        elif editor_type == "Compositor":
+            node.use_clamp = True  # Clamp
+        node.inputs["From Min"].default_value = -1.0  # From Min
+        node.inputs["From Max"].default_value = 1.0  # From Max
+        node.inputs["To Min"].default_value = 0.0  # To Min
+        node.inputs["To Max"].default_value = 1.0  # To Max
+        return node
+
+    if editor_type == "Shader":
+        map_range_node_output_socket_name = "Result"
+        converter_io_node_socket_name = "Color"
+    elif editor_type == "Compositor":
+        map_range_node_output_socket_name = "Value"
+        converter_io_node_socket_name = "Image"
+
+    map_range_nodes = {k: create_normal_to_rgb_map_node() for k in ["R", "G", "B"]}
+    comb_color_node = node_tree.nodes.new(f"{editor_type}NodeCombineColor")
+
+    link(sep_color_node.outputs["Red"], map_range_nodes["R"].inputs["Value"])
+    link(sep_color_node.outputs["Green"], map_range_nodes["G"].inputs["Value"])
+    link(sep_color_node.outputs["Blue"], map_range_nodes["B"].inputs["Value"])
+
+    link(
+        map_range_nodes["R"].outputs[map_range_node_output_socket_name],
+        comb_color_node.inputs["Red"],
+    )
+    link(
+        map_range_nodes["G"].outputs[map_range_node_output_socket_name],
+        comb_color_node.inputs["Green"],
+    )
+    link(
+        map_range_nodes["B"].outputs[map_range_node_output_socket_name],
+        comb_color_node.inputs["Blue"],
+    )
+
+    # return (input socket, output socket)
+    return (
+        sep_color_node.inputs[converter_io_node_socket_name],
+        comb_color_node.outputs[converter_io_node_socket_name],
+    )
+
+
+def set_file_output_non_color(node):
+    """Set file output node to use non-color data management."""
+    if int(bpy.app.version_string[0]) >= 4:
+        node.format.color_management = "OVERRIDE"
+        node.format.view_settings.view_transform = "Raw"
+    else:
+        node.format.color_management = "OVERRIDE"
+        node.format.display_settings.display_device = "None"
+
+
+def enable_normals_output(
+    output_dir: Optional[str] = "",
+    file_prefix: str = "normal_",
+    use_rgb_conversion: bool = True,
+    file_format: Literal["OPEN_EXR", "WEBP", "PNG"] = "WEBP",
+):
+    """
+    Enable normal output in pure world-space coordinates without any transformations.
+    This is the simplest version that directly outputs Blender's world-space normals.
+
+    When use_rgb_conversion=True and file_format in ["WEBP", "PNG"]:
+    - World-space normals in range [-1, 1] are mapped to RGB values in range [0, 1]
+    - This allows visualization in standard image formats while preserving normal data
+    - To recover normals: (rgb_values * 2 - 1) gives world-space normals in [-1, 1] range
+
+    Args:
+        output_dir: Output directory for normal files
+        file_prefix: Prefix for output files
+        use_rgb_conversion: Whether to convert normals to RGB for better visualization
+        file_format: Output file format
+    """
     bpy.context.scene.render.use_compositing = True
     bpy.context.scene.use_nodes = True
 
@@ -57,99 +146,50 @@ def enable_normals_output(output_dir: Optional[str] = "", file_prefix: str = "no
     bpy.context.view_layer.use_pass_normal = True
     bpy.context.scene.render.use_compositing = True
 
-    separate_rgba = tree.nodes.new("CompositorNodeSepRGBA")
-    space_between_nodes_x = 200
-    space_between_nodes_y = -300
-    separate_rgba.location.x = space_between_nodes_x
-    separate_rgba.location.y = space_between_nodes_y
-    tree.links.new(rl.outputs["Normal"], separate_rgba.inputs["Image"])
-
-    combine_rgba = tree.nodes.new("CompositorNodeCombRGBA")
-    combine_rgba.location.x = space_between_nodes_x * 14
-
-    c_channels = ["R", "G", "B"]
-    offset = space_between_nodes_x * 2
-    multiplication_values: List[List[bpy.types.Node]] = [[], [], []]
-    channel_results = {}
-    for row_index, channel in enumerate(c_channels):
-        # matrix multiplication
-        mulitpliers = []
-        for column in range(3):
-            multiply = tree.nodes.new("CompositorNodeMath")
-            multiply.operation = "MULTIPLY"
-            # setting at the end for all frames
-            multiply.inputs[1].default_value = 0
-            multiply.location.x = column * space_between_nodes_x + offset
-            multiply.location.y = row_index * space_between_nodes_y
-            tree.links.new(
-                separate_rgba.outputs[c_channels[column]], multiply.inputs[0]
-            )
-            mulitpliers.append(multiply)
-            multiplication_values[row_index].append(multiply)
-
-        first_add = tree.nodes.new("CompositorNodeMath")
-        first_add.operation = "ADD"
-        first_add.location.x = space_between_nodes_x * 5 + offset
-        first_add.location.y = row_index * space_between_nodes_y
-        tree.links.new(mulitpliers[0].outputs["Value"], first_add.inputs[0])
-        tree.links.new(mulitpliers[1].outputs["Value"], first_add.inputs[1])
-
-        second_add = tree.nodes.new("CompositorNodeMath")
-        second_add.operation = "ADD"
-        second_add.location.x = space_between_nodes_x * 6 + offset
-        second_add.location.y = row_index * space_between_nodes_y
-        tree.links.new(first_add.outputs["Value"], second_add.inputs[0])
-        tree.links.new(mulitpliers[2].outputs["Value"], second_add.inputs[1])
-
-        channel_results[channel] = second_add
-
-    rot_around_x_axis = mathutils.Matrix.Rotation(math.radians(-90.0), 4, "X")
-    for frame in range(bpy.context.scene.frame_start, bpy.context.scene.frame_end):
-        bpy.context.scene.frame_set(frame)
-        used_rotation_matrix = (
-            get_local2world_mat(bpy.context.scene.camera) @ rot_around_x_axis
-        )
-        for row_index in range(3):
-            for column_index in range(3):
-                current_multiply = multiplication_values[row_index][column_index]
-                current_multiply.inputs[1].default_value = used_rotation_matrix[
-                    column_index
-                ][row_index]
-                current_multiply.inputs[1].keyframe_insert(
-                    data_path="default_value", frame=frame
-                )
-
-    offset = 8 * space_between_nodes_x
-    for index, channel in enumerate(c_channels):
-        multiply = tree.nodes.new("CompositorNodeMath")
-        multiply.operation = "MULTIPLY"
-        multiply.location.x = space_between_nodes_x * 2 + offset
-        multiply.location.y = index * space_between_nodes_y
-        tree.links.new(channel_results[channel].outputs["Value"], multiply.inputs[0])
-        multiply.inputs[1].default_value = 0.5
-        if channel == "G":
-            multiply.inputs[1].default_value = -0.5
-        add = tree.nodes.new("CompositorNodeMath")
-        add.operation = "ADD"
-        add.location.x = space_between_nodes_x * 3 + offset
-        add.location.y = index * space_between_nodes_y
-        tree.links.new(multiply.outputs["Value"], add.inputs[0])
-        add.inputs[1].default_value = 0.5
-        output_channel = channel
-        if channel == "G":
-            output_channel = "B"
-        elif channel == "B":
-            output_channel = "G"
-        tree.links.new(add.outputs["Value"], combine_rgba.inputs[output_channel])
-
     normal_file_output = tree.nodes.new("CompositorNodeOutputFile")
     normal_file_output.base_path = output_dir
-    normal_file_output.format.file_format = "OPEN_EXR"
-    normal_file_output.format.color_mode = "RGBA"
-    normal_file_output.format.color_depth = "32"
-    normal_file_output.location.x = space_between_nodes_x * 15
+    normal_file_output.location.x = 400
     normal_file_output.file_slots.values()[0].path = file_prefix
-    tree.links.new(combine_rgba.outputs["Image"], normal_file_output.inputs["Image"])
+
+    if use_rgb_conversion and file_format in ["WEBP", "PNG"]:
+        # Convert normals to RGB for better visualization
+        normal_trans_input_socket, normal_trans_output_socket = (
+            make_normal_to_rgb_node_group(tree, editor_type="Compositor")
+        )
+
+        # Set alpha channel
+        set_normal_alpha_node = tree.nodes.new("CompositorNodeSetAlpha")
+        set_normal_alpha_node.mode = "REPLACE_ALPHA"
+
+        # Connect nodes
+        tree.links.new(rl.outputs["Normal"], normal_trans_input_socket)
+        tree.links.new(
+            normal_trans_output_socket, set_normal_alpha_node.inputs["Image"]
+        )
+        tree.links.new(rl.outputs["Alpha"], set_normal_alpha_node.inputs["Alpha"])
+        tree.links.new(
+            set_normal_alpha_node.outputs["Image"], normal_file_output.inputs["Image"]
+        )
+
+        # Configure output format
+        if file_format == "WEBP":
+            normal_file_output.format.file_format = "WEBP"
+            normal_file_output.format.quality = 100
+            normal_file_output.format.color_depth = "8"
+        elif file_format == "PNG":
+            normal_file_output.format.file_format = "PNG"
+            normal_file_output.format.color_depth = "16"
+
+        set_file_output_non_color(normal_file_output)
+
+    else:
+        # Direct output for EXR or raw normal data
+        tree.links.new(rl.outputs["Normal"], normal_file_output.inputs["Image"])
+
+        if file_format == "OPEN_EXR":
+            normal_file_output.format.file_format = "OPEN_EXR"
+            normal_file_output.format.color_mode = "RGBA"
+            normal_file_output.format.color_depth = "32"
 
 
 def enable_depth_output(output_dir: Optional[str] = "", file_prefix: str = "depth_"):
@@ -206,34 +246,54 @@ def enable_pbr_output(output_dir, attr_name, color_mode="RGBA", file_prefix: str
     if file_prefix == "":
         file_prefix = attr_name.lower().replace(" ", "-") + "_"
 
+    # Process each material to set up AOV outputs
     for material in bpy.data.materials:
-        material.use_nodes = True
+        if not material.use_nodes:
+            continue
+
         node_tree = material.node_tree
+        if not node_tree:
+            continue
+
         nodes = node_tree.nodes
-        roughness_input = nodes["Principled BSDF"].inputs[attr_name]
-        if roughness_input.is_linked:
-            linked_node = roughness_input.links[0].from_node
-            linked_socket = roughness_input.links[0].from_socket
+
+        # Check if Principled BSDF node exists
+        if "Principled BSDF" not in nodes:
+            continue
+
+        principled_node = nodes["Principled BSDF"]
+
+        # Check if the attribute exists in the Principled BSDF node
+        if attr_name not in principled_node.inputs:
+            print(
+                f"Warning: Attribute '{attr_name}' not found in Principled BSDF node for material '{material.name}'"
+            )
+            continue
+
+        attr_input = principled_node.inputs[attr_name]
+
+        if attr_input.is_linked:
+            linked_node = attr_input.links[0].from_node
+            linked_socket = attr_input.links[0].from_socket
 
             aov_output = nodes.new("ShaderNodeOutputAOV")
             aov_output.name = attr_name
             node_tree.links.new(linked_socket, aov_output.inputs[0])
 
         else:
-            fixed_roughness = roughness_input.default_value
-            if isinstance(fixed_roughness, float):
-                roughness_value = nodes.new("ShaderNodeValue")
-                input_idx = 1
+            fixed_value = attr_input.default_value
+            if isinstance(fixed_value, float):
+                value_node = nodes.new("ShaderNodeValue")
+                value_node.outputs[0].default_value = fixed_value
             else:
-                roughness_value = nodes.new("ShaderNodeRGB")
-                input_idx = 0
-
-            roughness_value.outputs[0].default_value = fixed_roughness
+                value_node = nodes.new("ShaderNodeRGB")
+                value_node.outputs[0].default_value = fixed_value
 
             aov_output = nodes.new("ShaderNodeOutputAOV")
             aov_output.name = attr_name
-            node_tree.links.new(roughness_value.outputs[0], aov_output.inputs[0])
+            node_tree.links.new(value_node.outputs[0], aov_output.inputs[0])
 
+    # Set up compositor nodes
     tree = bpy.context.scene.node_tree
     links = tree.links
     if "Render Layers" not in tree.nodes:
@@ -241,21 +301,24 @@ def enable_pbr_output(output_dir, attr_name, color_mode="RGBA", file_prefix: str
     else:
         rl = tree.nodes["Render Layers"]
 
-    roughness_file_output = tree.nodes.new(type="CompositorNodeOutputFile")
-    roughness_file_output.base_path = output_dir
-    roughness_file_output.file_slots[0].use_node_format = True
-    roughness_file_output.format.file_format = "PNG"
-    roughness_file_output.format.color_mode = color_mode
-    roughness_file_output.format.color_depth = "16"
-    roughness_file_output.file_slots.values()[0].path = file_prefix
+    pbr_file_output = tree.nodes.new(type="CompositorNodeOutputFile")
+    pbr_file_output.base_path = output_dir
+    pbr_file_output.file_slots[0].use_node_format = True
+    pbr_file_output.format.file_format = "PNG"
+    pbr_file_output.format.color_mode = color_mode
+    pbr_file_output.format.color_depth = "16"
+    pbr_file_output.file_slots.values()[0].path = file_prefix
 
+    # Add AOV to view layer
     bpy.ops.scene.view_layer_add_aov()
     bpy.context.scene.view_layers["ViewLayer"].active_aov.name = attr_name
-    roughness_alpha = tree.nodes.new(type="CompositorNodeSetAlpha")
-    tree.links.new(rl.outputs[attr_name], roughness_alpha.inputs["Image"])
-    tree.links.new(rl.outputs["Alpha"], roughness_alpha.inputs["Alpha"])
 
-    links.new(roughness_alpha.outputs["Image"], roughness_file_output.inputs["Image"])
+    # Set up alpha compositing
+    pbr_alpha = tree.nodes.new(type="CompositorNodeSetAlpha")
+    tree.links.new(rl.outputs[attr_name], pbr_alpha.inputs["Image"])
+    tree.links.new(rl.outputs["Alpha"], pbr_alpha.inputs["Alpha"])
+
+    links.new(pbr_alpha.outputs["Image"], pbr_file_output.inputs["Image"])
 
 
 def get_keypoint_data(keypoint_names: Optional[List] = None):
