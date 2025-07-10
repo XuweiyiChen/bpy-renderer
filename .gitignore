@@ -163,3 +163,7 @@ cython_debug/
 .vscode/
 
 outputs/
+env
+objaverse
+test_render
+objaverse_renders
