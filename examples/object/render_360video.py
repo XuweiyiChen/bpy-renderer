@@ -13,7 +13,7 @@ from bpyrenderer.camera.layout import get_camera_positions_on_sphere
 output_dir = "outputs"
 
 # 1. Init engine and scene manager
-init_render_engine("BLENDER_EEVEE")
+init_render_engine("BLENDER_EEVEE_NEXT")
 scene_manager = SceneManager()
 scene_manager.clear(reset_keyframes=True)
 

@@ -60,3 +60,12 @@ Coming soon! For now, please check our example script in [render_360video.py](./
 | [scene/render_360video_decomp.py](examples/scene/render_360video_decomp.py) | Render 360 degree "semantic-field-like" video from a scene |
 | [animation/render_animation_video.py](examples/animation/render_animation_video.py) | Render a single-view video from an animation |
 | [animation/render_animation_union.py](examples/animation/render_animation_union.py) | Render single-view rgb, depth, normal video from an animation |
+
+
+```
+xvfb-run -a python render_360video_frames.py
+```
+
+```
+conda activate /home/ubuntu/xuweiyi/generate_objaverse/env && python reconstruct_3d_pointcloud.py --data_dir outputs_v3 --output pointcloud_filtered.ply --max_depth_range 3.0
+```

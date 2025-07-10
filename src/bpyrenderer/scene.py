@@ -150,8 +150,9 @@ class SceneManager:
 
     def smooth(self):
         for obj in self.scene_meshes:
-            obj.data.use_auto_smooth = True
-            obj.data.auto_smooth_angle = np.deg2rad(30)
+            # obj.data.use_auto_smooth = True  # Deprecated in newer Blender versions
+            # obj.data.auto_smooth_angle = np.deg2rad(30)
+            pass
 
     def clear_normal_map(self):
         for material in bpy.data.materials:

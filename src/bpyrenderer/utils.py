@@ -103,6 +103,8 @@ def convert_depth_to_webp(src: List[str], dst: List[str]) -> Tuple[float, float]
     Returns:
         Tuple[float, float]: (min_depth, scale) - The minimum depth value and scale factor used for normalization
     """
+    import bpy
+    
     # Read all depth images
     depth_images = []
     valid_masks = []
@@ -110,8 +112,23 @@ def convert_depth_to_webp(src: List[str], dst: List[str]) -> Tuple[float, float]
     max_depth = float("-inf")
 
     for path in src:
-        # Read EXR image
-        depth = imageio.imread(path)
+        # Read EXR image using Blender's native loader
+        img = bpy.data.images.load(path)
+        
+        # Get pixel data as numpy array
+        width, height = img.size
+        pixels = np.array(img.pixels[:]).reshape((height, width, img.channels))
+        
+        # For depth images, we typically want the first channel (grayscale)
+        if img.channels == 1:
+            depth = pixels[:, :, 0]
+        else:
+            # If it's multi-channel, use the first channel
+            depth = pixels[:, :, 0]
+        
+        # Flip vertically (Blender images are stored upside down)
+        depth = np.flipud(depth)
+        
         # Create mask for valid depth values
         mask = np.ones_like(depth, dtype=float)
         mask[depth > 1000.0] = 0.0
@@ -125,6 +142,9 @@ def convert_depth_to_webp(src: List[str], dst: List[str]) -> Tuple[float, float]
 
         depth_images.append(depth)
         valid_masks.append(mask)
+        
+        # Clean up Blender image to avoid memory issues
+        bpy.data.images.remove(img)
 
     # Calculate scale factor for normalization
     scale = 255.0 / (max_depth - min_depth) if max_depth > min_depth else 1.0
@@ -137,8 +157,11 @@ def convert_depth_to_webp(src: List[str], dst: List[str]) -> Tuple[float, float]
         normalized_depth[~(mask > 0.5)] = 0.0
         # Convert to uint8
         depth_uint8 = normalized_depth.astype(np.uint8)
-        # Save as PNG
-        imageio.imwrite(output_path, depth_uint8)
+        
+        # Save as PNG using PIL (more reliable than imageio for PNG)
+        from PIL import Image
+        img_pil = Image.fromarray(depth_uint8, mode='L')
+        img_pil.save(output_path, 'PNG')
 
     return min_depth, scale
 
